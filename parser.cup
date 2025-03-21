@@ -1,0 +1,76 @@
+/*
+   Simple +/-/* expression language; 
+   parser evaluates constant expressions on the fly
+*/
+
+package cup.example;
+
+import java_cup.runtime.*;
+import cup.example.Lexer;
+import java.io.IOException;
+import java.io.File;
+import java.io.FileInputStream;
+import utilities.*;
+
+parser code {:
+  protected Lexer lexer;
+  
+:}
+
+/* define how to connect to the scanner! */
+init with {:
+  ComplexSymbolFactory f = new ComplexSymbolFactory();
+  symbolFactory = f;
+  File file = new File("input.txt");
+  FileInputStream fis = null;
+  try {
+    fis = new FileInputStream(file);
+  } catch (IOException e) {
+    e.printStackTrace();
+  } 
+  lexer = new Lexer(f,fis);
+  SymbolTable.init();
+  Methods.init();
+  
+:};
+scan with {: return lexer.next_token(); :};
+
+/* Terminals (tokens returned by the scanner). */
+terminal            SEMI, PLUS, MINUS, TIMES, DIV, ASSIGN, TYINT, TYFLOAT, PRINT;
+terminal String    	INT, FLOAT, ID;       
+
+/* Non terminals */
+non terminal TypeDescriptor Prg, DSs, Dcl,Stm, Exp, Val;      
+
+/* Precedences */
+precedence left PLUS, MINUS;
+precedence left TIMES, DIV;
+
+
+/* The grammar rules */
+Prg      ::= DSs:type         	 			{:RESULT= Methods.prg(type);:}
+			;
+DSs      ::= Dcl:type1 DSs:type2        	{:RESULT= Methods.dss1(type1,type2);:}
+		    |Stm:type1 DSs:type2			{:RESULT= Methods.dss2(type1,type2);:}
+		   	|				 				{:RESULT= Methods.dss3();:}
+		   	;
+Dcl      ::= TYFLOAT ID:val SEMI     		{:RESULT= Methods.dcl1(val);:}
+			|TYINT ID:val SEMI       		{:RESULT= Methods.dcl2(val);:}
+			;
+Stm      ::= ID:val ASSIGN Exp:type SEMI 	{:RESULT= Methods.stm1(val,type);:}
+			|PRINT ID:val SEMI       		{:RESULT= Methods.stm2(val);:}
+			;
+Exp      ::= Exp:type1 PLUS Exp:type2    	{:RESULT= Methods.exp1(type1,type2);:}
+			|Exp:type1 MINUS Exp:type2	 	{:RESULT= Methods.exp2(type1,type2);:}
+			|Exp:type1 TIMES Exp:type2	 	{:RESULT= Methods.exp3(type1,type2);:}
+			|Exp:type1 DIV Exp:type2	 	{:RESULT= Methods.exp4(type1,type2);:}
+			|Val:type	 		 			{:RESULT= Methods.exp5(type);:}
+			;
+Val      ::= INT:val	       	 			{:RESULT= Methods.val1(val);:}
+			|FLOAT:val	 		 			{:RESULT= Methods.val2(val);:}
+			|ID:val	 		 	 			{:RESULT= Methods.val3(val);:}
+			;
+		   
+
+            
+       
